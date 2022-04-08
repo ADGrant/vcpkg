@@ -11,6 +11,7 @@
       "features": [
         "bolt",
         "clang",
+        "clang-tools-extra",
         "disable-assertions",
         "disable-clang-static-analyzer",
         "enable-abi-breaking-checks",
@@ -20,16 +21,17 @@
         "enable-terminfo",
         "enable-threads",
         "enable-zlib",
+        "flang",
+        "libcxx",
+        "libunwind",
         "lld",
         "lldb",
+        "mlir",
         "openmp",
         "polly",
-        "target-aarch64",
-        "target-amdgpu",
-        "target-arm",
-        "target-webassembly",
-        "target-x86",
-        "tools"
+        "target-all",
+        "tools",
+        "utils"
       ]
     },
     {

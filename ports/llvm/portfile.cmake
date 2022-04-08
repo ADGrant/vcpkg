@@ -1,4 +1,4 @@
-set(LLVM_VERSION "14.0.4")
+set(LLVM_VERSION "14.0.6")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,16 +6,15 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 e14e6c3a1915a96e9ddc609f16ca3a398ca6f7fd0a691dadaa24490078a661340e845cb2d18f3679de4f47300bb822c33ae69548af6a0370d55737831a28b959
+    SHA512 d64f97754c24f32deb5f284ebbd486b3a467978b7463d622f50d5237fff91108616137b4394f1d1ce836efa59bf7bec675b6dee257a79b241c15be52d4697460
     HEAD_REF main
     PATCHES
-        0002-fix-install-paths.patch    # This patch fixes paths in ClangConfig.cmake, LLVMConfig.cmake, LLDConfig.cmake etc.
+        0001-fix-install-tools-path.patch
         0004-fix-dr-1734.patch
         0005-fix-tools-path.patch
-        0007-fix-compiler-rt-install-path.patch
-        0009-fix-tools-install-path.patch
         0010-fix-libffi.patch
         0011-fix-install-bolt.patch
+        0012-fix-libcxx-path-install.patch
 )
 
 vcpkg_check_features(
@@ -108,10 +107,6 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF
         )
     endif()
-    # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
-    # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
-    # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
-    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION})
 endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
@@ -248,37 +243,55 @@ vcpkg_cmake_configure(
         -DPACKAGE_VERSION=${LLVM_VERSION}
         # Limit the maximum number of concurrent link jobs to 1. This should fix low amount of memory issue for link.
         "-DLLVM_PARALLEL_LINK_JOBS=${LLVM_LINK_JOBS}"
-        -DLLVM_TOOLS_INSTALL_DIR=tools/llvm
+        -DLLVM_TOOLS_INSTALL_DIR=tools/llvm/bin
 )
 
 vcpkg_cmake_install(ADD_BIN_TO_PATH)
 
+# 'package_name' should be the case of the package used in CMake 'find_package'
+# 'FEATURE_NAME' should be the name of the vcpkg port feature
 function(llvm_cmake_package_config_fixup package_name)
     cmake_parse_arguments("arg" "DO_NOT_DELETE_PARENT_CONFIG_PATH" "FEATURE_NAME" "" ${ARGN})
+    string(TOUPPER "${package_name}" upper_package)
+    string(TOLOWER "${package_name}" lower_package)
     if(NOT DEFINED arg_FEATURE_NAME)
-        set(arg_FEATURE_NAME ${package_name})
+        set(arg_FEATURE_NAME ${lower_package})
     endif()
-    if("${arg_FEATURE_NAME}" STREQUAL "${PORT}" OR "${arg_FEATURE_NAME}" IN_LIST FEATURES)
+    if("${lower_package}" STREQUAL "${PORT}" OR "${arg_FEATURE_NAME}" IN_LIST FEATURES)
         set(args)
-        list(APPEND args PACKAGE_NAME "${package_name}")
+        # Maintains case even if package_name name is case-sensitive
+        list(APPEND args PACKAGE_NAME "${lower_package}")
+        list(APPEND args TOOLS_PATH "tools/${PORT}/bin")
+        # TODO: There is a LLVM_LIBDIR_SUFFIX attached to 'lib' that might make this not work for everyone
+        list(APPEND args CONFIG_PATH "lib/cmake/${lower_package}")
         if(arg_DO_NOT_DELETE_PARENT_CONFIG_PATH)
             list(APPEND args "DO_NOT_DELETE_PARENT_CONFIG_PATH")
         endif()
         vcpkg_cmake_config_fixup(${args})
-        file(INSTALL "${SOURCE_PATH}/${package_name}/LICENSE.TXT" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${package_name}" RENAME copyright)
-        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${package_name}_usage")
-            file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/${package_name}_usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${package_name}" RENAME usage)
+        file(INSTALL "${SOURCE_PATH}/${lower_package}/LICENSE.TXT" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${lower_package}" RENAME copyright)
+
+        # Fixup paths
+        vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/${lower_package}/${package_name}Config.cmake" "lib/cmake" "share")
+        # Remove last parent directory
+        vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/${lower_package}/${package_name}Config.cmake" "get_filename_component(${upper_package}_INSTALL_PREFIX \"\${${upper_package}_INSTALL_PREFIX}\" PATH)\n\n" "\n")
+
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage")
+            file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${lower_package}" RENAME usage)
         endif()
     endif()
 endfunction()
 
-llvm_cmake_package_config_fixup("clang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-llvm_cmake_package_config_fixup("flang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-llvm_cmake_package_config_fixup("lld" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-llvm_cmake_package_config_fixup("mlir" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-llvm_cmake_package_config_fixup("polly" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("Clang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("Flang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("LLD" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("MLIR" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("Polly" DO_NOT_DELETE_PARENT_CONFIG_PATH)
 llvm_cmake_package_config_fixup("ParallelSTL" FEATURE_NAME "pstl" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-llvm_cmake_package_config_fixup("llvm")
+llvm_cmake_package_config_fixup("LLVM")
+
+# Move the clang headers directory so that the built compiler can use the includes
+file(MAKE_DIRECTORY "${CURRENT_PACKAGES_DIR}/tools/llvm/lib")
+file(RENAME "${CURRENT_PACKAGES_DIR}/lib/clang" "${CURRENT_PACKAGES_DIR}/tools/llvm/lib/clang")
 
 set(empty_dirs)
 
@@ -310,19 +323,15 @@ if(empty_dirs)
     endforeach()
 endif()
 
-vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/${PORT})
-
 if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
     file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include"
         "${CURRENT_PACKAGES_DIR}/debug/share"
         "${CURRENT_PACKAGES_DIR}/debug/tools"
+        "${CURRENT_PACKAGES_DIR}/debug/lib/clang"
     )
 endif()
 
-if("mlir" IN_LIST FEATURES)
-    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/mlir/MLIRConfig.cmake" "set(MLIR_MAIN_SRC_DIR \"${SOURCE_PATH}/mlir\")" "")
-    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/mlir/MLIRConfig.cmake" "${CURRENT_BUILDTREES_DIR}" "\${MLIR_INCLUDE_DIRS}")
-endif()
+vcpkg_copy_tool_dependencies("${CURRENT_PACKAGES_DIR}/tools/llvm/bin")
 
 # LLVM still generates a few DLLs in the static build:
 # * LLVM-C.dll

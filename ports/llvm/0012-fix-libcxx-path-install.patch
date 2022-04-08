@@ -1,0 +1,80 @@
+diff --git a/libcxx/CMakeLists.txt b/libcxx/CMakeLists.txt
+index 98baa73d61e5..eaf4d4e3cdf8 100644
+--- a/libcxx/CMakeLists.txt
++++ b/libcxx/CMakeLists.txt
+@@ -427,18 +427,19 @@ endif ()
+ # TODO: Projects that depend on libc++ should use LIBCXX_GENERATED_INCLUDE_DIR
+ # instead of hard-coding include/c++/v1.
+ 
+-set(LIBCXX_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH
+-    "Path where target-agnostic libc++ headers should be installed.")
+-set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
++set(LIBCXX_INSTALL_BASE_INCLUDE_DIR "tools/llvm/include")
++set(LIBCXX_INSTALL_INCLUDE_DIR "${LIBCXX_INSTALL_BASE_INCLUDE_DIR}/c++/v1" CACHE PATH
++    "Path where target-agnostic libc++ headers should be installed.")
++set(LIBCXX_INSTALL_RUNTIME_DIR "tools/llvm/${CMAKE_INSTALL_BINDIR}" CACHE PATH
+     "Path where built libc++ runtime libraries should be installed.")
+ 
+ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+-  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
++  set(LIBCXX_INSTALL_LIBRARY_DIR tools/llvm/lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
+       "Path where built libc++ libraries should be installed.")
+-  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE PATH
++  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_BASE_INCLUDE_DIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE PATH
+       "Path where target-specific libc++ headers should be installed.")
+   if(LIBCXX_LIBDIR_SUBDIR)
+     string(APPEND LIBCXX_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
+@@ -453,7 +454,7 @@ else()
+     set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+   endif()
+   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
+-  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
++  set(LIBCXX_INSTALL_LIBRARY_DIR tools/llvm/lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
+       "Path where built libc++ libraries should be installed.")
+   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}" CACHE PATH
+       "Path where target-specific libc++ headers should be installed.")
+diff --git a/libcxxabi/CMakeLists.txt b/libcxxabi/CMakeLists.txt
+index aa49944ab1a2..4ca1b24c4ef6 100644
+--- a/libcxxabi/CMakeLists.txt
++++ b/libcxxabi/CMakeLists.txt
+@@ -223,13 +223,13 @@ set(CMAKE_MODULE_PATH
+   ${CMAKE_MODULE_PATH}
+   )
+ 
+-set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
++set(LIBCXXABI_INSTALL_RUNTIME_DIR tools/llvm/"${CMAKE_INSTALL_BINDIR}" CACHE PATH
+     "Path where built libc++abi runtime libraries should be installed.")
+ 
+ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+   set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
+   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
++  set(LIBCXXABI_INSTALL_LIBRARY_DIR tools/llvm/lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
+       "Path where built libc++abi libraries should be installed.")
+   if(LIBCXX_LIBDIR_SUBDIR)
+     string(APPEND LIBCXXABI_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
+@@ -243,7 +243,7 @@ else()
+     set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
+     set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
+   endif()
+-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
++  set(LIBCXXABI_INSTALL_LIBRARY_DIR tools/llvm/lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
+       "Path where built libc++abi libraries should be installed.")
+ endif()
+ 
+diff --git a/libcxx/cmake/Modules/HandleLibCXXABI.cmake b/libcxx/cmake/Modules/HandleLibCXXABI.cmake
+index 9b5df6e015b3..693b52c2ad9e 100644
+--- a/libcxx/cmake/Modules/HandleLibCXXABI.cmake
++++ b/libcxx/cmake/Modules/HandleLibCXXABI.cmake
+@@ -64,7 +64,7 @@ macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
+ 
+         if (LIBCXX_INSTALL_HEADERS)
+           install(FILES "${LIBCXX_BINARY_INCLUDE_DIR}/${fpath}"
+-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1/${dstdir}"
++            DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}/c++/v1/${dstdir}"
+             COMPONENT cxx-headers
+             PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+             )
