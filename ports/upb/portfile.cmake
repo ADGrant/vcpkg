@@ -26,14 +26,19 @@ vcpkg_check_features(
         codegen VCPKG_UPB_BUILD_CODEGEN
 )
 
-if(NOT VCPKG_UPB_BUILD_CODEGEN)
-    vcpkg_add_to_path(PREPEND "${CURRENT_HOST_INSTALLED_DIR}/tools/protobuf" "${CURRENT_HOST_INSTALLED_DIR}/tools/upb")
+set(CROSS_OPTIONS "")
+if(VCPKG_CROSSCOMPILING)
+    list(APPEND CROSS_OPTIONS
+        "-DPROTOC_GEN_UPB_PROGRAM=${CURRENT_HOST_INSTALLED_DIR}/tools/upb/protoc-gen-upb"
+        "-DPROTOC_GEN_UPBDEFS_PROGRAM=${CURRENT_HOST_INSTALLED_DIR}/tools/upb/protoc-gen-upbdefs"
+    )
 endif()
 
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}/cmake"
-    OPTIONS ${FEATURE_OPTIONS}
+    OPTIONS ${FEATURE_OPTIONS} ${CROSS_OPTIONS}
         "-DVCPKG_UPB_HOST_INCLUDE_DIR=${CURRENT_HOST_INSTALLED_DIR}/include"
+        "-DPROTOC_PROGRAM=${CURRENT_HOST_INSTALLED_DIR}/tools/protobuf/protoc"
 )
 
 vcpkg_cmake_install(ADD_BIN_TO_PATH)
