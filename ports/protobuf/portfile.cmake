@@ -10,6 +10,7 @@ vcpkg_from_github(
         fix-static-build.patch
         fix-default-proto-file-path.patch
         compile_options.patch
+        fix-crosscompile-protoc-generate-cmake-config.patch
 )
 
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "dynamic" protobuf_BUILD_SHARED_LIBS)

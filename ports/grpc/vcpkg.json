@@ -22,7 +22,10 @@
     "protobuf",
     {
       "name": "protobuf",
-      "host": true
+      "host": true,
+      "features": [
+        "codegen"
+      ]
     },
     "re2",
     "upb",
