@@ -230,6 +230,10 @@ if(NOT DEFINED CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO)
     endif()
 endif()
 
+if(VCPKG_HOST_TRIPLET)
+    set(VCPKG_HOST_TRIPLET "${VCPKG_HOST_TRIPLET}" CACHE STRING "Vcpkg host triplet (ex. x86-windows)" FORCE)
+endif()
+
 if(VCPKG_TARGET_TRIPLET)
     # This is required since a user might do: 'set(VCPKG_TARGET_TRIPLET somevalue)' [no CACHE] before the first project() call
     # Latter within the toolchain file we do: 'set(VCPKG_TARGET_TRIPLET somevalue CACHE STRING "")' which
@@ -239,7 +243,9 @@ if(VCPKG_TARGET_TRIPLET)
     # configure call will see the user value as the more recent value. The same logic must be applied to all cache values within this file!
     # The FORCE keyword is required to ALWAYS lift the user provided/previously set value into a CACHE value.
     set(VCPKG_TARGET_TRIPLET "${VCPKG_TARGET_TRIPLET}" CACHE STRING "Vcpkg target triplet (ex. x86-windows)" FORCE)
-elseif(CMAKE_GENERATOR_PLATFORM MATCHES "^[Ww][Ii][Nn]32$")
+endif()
+
+if(CMAKE_GENERATOR_PLATFORM MATCHES "^[Ww][Ii][Nn]32$")
     set(Z_VCPKG_TARGET_TRIPLET_ARCH x86)
 elseif(CMAKE_GENERATOR_PLATFORM MATCHES "^[Xx]64$")
     set(Z_VCPKG_TARGET_TRIPLET_ARCH x64)
@@ -357,6 +363,8 @@ if(EMSCRIPTEN)
     set(Z_VCPKG_TARGET_TRIPLET_PLAT emscripten)
 endif()
 
+# Default host triplet is same as default target triplet
+set(VCPKG_HOST_TRIPLET "${Z_VCPKG_TARGET_TRIPLET_ARCH}-${Z_VCPKG_TARGET_TRIPLET_PLAT}" CACHE STRING "Vcpkg host triplet (ex. x86-windows)")
 set(VCPKG_TARGET_TRIPLET "${Z_VCPKG_TARGET_TRIPLET_ARCH}-${Z_VCPKG_TARGET_TRIPLET_PLAT}" CACHE STRING "Vcpkg target triplet (ex. x86-windows)")
 set(Z_VCPKG_TOOLCHAIN_DIR "${CMAKE_CURRENT_LIST_DIR}")
 

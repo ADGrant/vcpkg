@@ -18,7 +18,11 @@
       "host": true
     }
   ],
+  "default-features": [ "codegen" ],
   "features": {
+    "codegen": {
+      "description": "Build protoc code generator tool"
+    },
     "zlib": {
       "description": "ZLib based features like Gzip streams",
       "dependencies": [
