@@ -222,6 +222,11 @@ function(vcpkg_cmake_configure)
         "-DCMAKE_INSTALL_PREFIX=${CURRENT_PACKAGES_DIR}/debug"
         ${arg_OPTIONS} ${arg_OPTIONS_DEBUG})
 
+    z_vcpkg_prettify_command_line(pretty ${dbg_command})
+    message(STATUS "Will run CMake debug command:\n${pretty}")
+    z_vcpkg_prettify_command_line(pretty ${rel_command})
+    message(STATUS "Will run CMake debug command:\n${pretty}")
+
     if(NOT arg_DISABLE_PARALLEL_CONFIGURE)
         vcpkg_list(APPEND arg_OPTIONS "-DCMAKE_DISABLE_SOURCE_CHANGES=ON")
 
